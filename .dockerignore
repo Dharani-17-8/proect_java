@@ -1,0 +1,16 @@
+
+# Maven
+/target
+
+# IDE
+/.idea
+/.project
+/.settings
+/*.iml
+
+# VCS
+/.git
+/.gitignore
+
+# OS
+.DS_Store
