@@ -1,34 +1,36 @@
-
-version: '3.8'
+version: '3.1'
 services:
-  postgres:
-    image: postgres:16
-    container_name: inventory-postgres
-    restart: unless-stopped
+  db:
+    image: postgres:17.4
+    container_name: inventory-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: inventorydb
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+ 
   app:
     build: .
-    container_name: inventory-api
+    image: ${APP_IMAGE}      # ✅ This enables docker push
+    container_name: inventory-app
     depends_on:
-      - postgres
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     ports:
       - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventorydb
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
-    # Uncomment if you want to see SQL in logs
-    # environment:
-    #   SPRING_JPA_SHOW_SQL: "true"
-
+ 
 volumes:
-  pgdata:
+  db-data:
+ 

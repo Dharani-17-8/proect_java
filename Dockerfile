@@ -1,21 +1,20 @@
-
-# --- Build stage ---
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# ---- Build stage ----
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
-COPY . /app
-RUN mvn -DskipTests clean package
-
-# --- Runtime stage ---
-FROM eclipse-temurin:17-jre
-WORKDIR /opt/app
-
-# Copy built jar
-COPY --from=builder /app/target/inventory-api-0.0.1-SNAPSHOT.jar app.jar
-
-# Expose port
+ 
+# Cache dependencies
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+ 
+# Build app
+COPY src ./src
+RUN mvn -q -DskipTests package
+ 
+# ---- Runtime stage ----
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+ 
 EXPOSE 8080
-
-# Optional: env vars for DB (can override at runtime)
-ENV SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/inventorydb     SPRING_DATASOURCE_USERNAME=postgres     SPRING_DATASOURCE_PASSWORD=root     SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
-
-ENTRYPOINT ["java","-jar","/opt/app/app.jar"]
+ENV JAVA_OPTS=""
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
